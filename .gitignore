@@ -1,0 +1,15 @@
+﻿__pycache__/
+*.py[cod]
+.venv/
+.ipynb_checkpoints/
+.DS_Store
+Thumbs.db
+.vscode/
+config/paths.local.json
+output/
+logs/
+~$*.xlsx
+*.tmp
+*.log
+data/
+raw/
