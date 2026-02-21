@@ -6,7 +6,7 @@
 ## Environment
 - Python 3.13
 - Virtual Env: .venv
-- Main libs: pandas, openpyxl, jupyter
+- Main libs: pandas, openpyxl, jupyter, tqdm
 
 ## Start
 source .venv/bin/activate
