@@ -45,6 +45,18 @@ def get_path(key: str) -> Path:
     return p
 
 
+def get_path_optional(key: str) -> Path | None:
+    """경로 반환. 키가 없거나 값이 비어 있으면 None."""
+    paths = load_paths()
+    val = paths.get(key)
+    if val is None or (isinstance(val, str) and val.strip() == ""):
+        return None
+    p = Path(val)
+    if not p.is_absolute():
+        p = (PROJECT_ROOT / p).resolve()
+    return p
+
+
 def ensure_runtime_dirs() -> dict[str, Path]:
     output_dir = get_path("output_root")
     log_dir = get_path("log_root")

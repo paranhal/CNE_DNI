@@ -1,7 +1,7 @@
 """
-학교 수 719개 검증 및 누락 학교 확인.
+대상 학교 수 검증 및 누락 학교 확인.
 
-- 대상 학교 리스트: 충남_대상학교_리스트.xlsx (기준 719개)
+- 대상 학교 리스트: output/CNE_LIST.xlsx (충남 작업 기준)
 - 가상자산 학교정보 시트와 비교 → 대상인데 데이터에 없는 학교 / 데이터에 있지만 비대상 학교
 - 품질 검사 재실행하여 미수정 오류 잔여 건수 확인
 """
@@ -15,30 +15,54 @@ import pandas as pd
 from .load_excel import load_va_data_sheets
 from .data_quality import run_va_quality_checks, DEFAULT_VA_PATH
 
-# 기준 학교 수
-TARGET_SCHOOL_COUNT = 719
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
-# 대상 학교 리스트 파일 (학교코드·학교명 기준)
-DEFAULT_TARGET_SCHOOL_LIST_PATH = Path(
-    "/Users/paranhal/Library/CloudStorage/GoogleDrive-paranhanl66@gmail.com"
-    "/내 드라이브/20260215_D드라이브/Lee_20260202/충남_대상학교_리스트.xlsx"
-)
+# 대상 학교 리스트 파일 (학교코드·학교명 기준). 설정에서 target_school_list로 덮어쓸 수 있음.
+DEFAULT_TARGET_SCHOOL_LIST_PATH = _PROJECT_ROOT / "output" / "CNE_LIST.xlsx"
+
+
+def _resolve_target_list_path(path: Path | str | None) -> Path:
+    """대상 학교 리스트 경로 결정: 인자 > config target_school_list > 기본(output/CNE_LIST.xlsx)."""
+    if path is not None:
+        return Path(path).resolve()
+    try:
+        from .config_loader import get_path
+        return get_path("target_school_list")
+    except (KeyError, FileNotFoundError):
+        pass
+    p = DEFAULT_TARGET_SCHOOL_LIST_PATH
+    return p.resolve() if p.is_absolute() else (_PROJECT_ROOT / p).resolve()
 
 
 def load_target_school_list(path: Path | str | None = None) -> pd.DataFrame:
-    """대상 학교 리스트 로드. 컬럼: 학교코드, 학교명(있으면), 지역(있으면)."""
-    path = Path(path) if path else DEFAULT_TARGET_SCHOOL_LIST_PATH
-    if not path.exists():
-        return pd.DataFrame(columns=["학교코드", "학교명"])
-    # 시트 1, 1행 헤더
-    df = pd.read_excel(path, sheet_name="시트 1", header=0, engine="openpyxl")
+    """대상 학교 리스트 로드(CNE_LIST.xlsx 등). 컬럼: 학교코드, 학교명(있으면)."""
+    resolved = _resolve_target_list_path(path)
+    if not resolved.exists():
+        return pd.DataFrame(columns=["학교코드", "지역", "학교명"])
+    xl = pd.ExcelFile(resolved, engine="openpyxl")
+    # CNE_LIST.xlsx: 시트 'CNE', 헤더가 4행(0-based index 3): 학교코드, 지역, 학교명
+    if "CNE" in xl.sheet_names:
+        df = pd.read_excel(resolved, sheet_name="CNE", header=3, engine="openpyxl")
+    else:
+        try:
+            df = pd.read_excel(resolved, sheet_name="시트 1", header=0, engine="openpyxl")
+        except ValueError:
+            df = pd.read_excel(resolved, sheet_name=0, header=0, engine="openpyxl")
+    xl.close()
+    # 학교코드 컬럼
+    if "학교코드" not in df.columns and len(df.columns):
+        df = df.rename(columns={df.columns[0]: "학교코드"})
     df = df.dropna(subset=["학교코드"])
     df["학교코드"] = df["학교코드"].astype(str).str.strip()
     if "학교명" not in df.columns:
         df["학교명"] = ""
     else:
         df["학교명"] = df["학교명"].fillna("").astype(str).str.strip()
-    return df[["학교코드", "학교명"]]
+    if "지역" not in df.columns:
+        df["지역"] = ""
+    else:
+        df["지역"] = df["지역"].fillna("").astype(str).str.strip()
+    return df[["학교코드", "지역", "학교명"]]
 
 
 def get_va_path() -> Path:
@@ -60,7 +84,7 @@ def get_va_path() -> Path:
 
 
 def get_target_school_codes(path: Path | str | None = None) -> set[str]:
-    """719 대상 학교코드 집합 반환. 분석 시 이 집합으로만 필터링."""
+    """대상 학교 리스트(CNE_LIST.xlsx)의 학교코드 집합 반환. 분석 시 이 집합으로만 필터링."""
     df = load_target_school_list(path)
     return set(df["학교코드"].tolist()) if not df.empty else set()
 
@@ -69,7 +93,7 @@ def filter_va_data_by_target(
     va_data: dict[str, pd.DataFrame],
     target_codes: set[str] | None = None,
 ) -> dict[str, pd.DataFrame]:
-    """가상자산 데이터를 719 대상 학교만 남김. target_codes 없으면 load_target_school_list()로 로드."""
+    """가상자산 데이터를 대상 학교 리스트(CNE_LIST.xlsx) 기준으로만 남김. target_codes 없으면 load_target_school_list()로 로드."""
     import re
     if target_codes is None:
         target_codes = get_target_school_codes()
@@ -125,7 +149,7 @@ def run_verification(
     Returns: {
         "va_path": path,
         "school_count": int,
-        "target_count": 719,
+        "target_count": int (대상 리스트 학교 수),
         "school_list": DataFrame (학교코드, 학교명),
         "in_equipment_not_in_info": list,  # 장비에만 있고 학교정보에 없는 학교코드
         "in_info_not_in_equipment": list,  # 학교정보에만 있고 장비에 없는 학교코드 (참고)
@@ -158,7 +182,7 @@ def run_verification(
     target_count = len(target_codes)
     missing_from_data = sorted(target_codes - info_codes)  # 대상인데 가상자산 학교정보에 없음
     extra_in_data = sorted(info_codes - target_codes)  # 가상자산에 있지만 대상 리스트에 없음 (비대상)
-    missing_df = target_df[target_df["학교코드"].isin(missing_from_data)] if not target_df.empty and missing_from_data else pd.DataFrame(columns=["학교코드", "학교명"])
+    missing_df = target_df[target_df["학교코드"].isin(missing_from_data)] if not target_df.empty and missing_from_data else pd.DataFrame(columns=["학교코드", "지역", "학교명"])
 
     # 장비 시트에서 등장하는 학교코드 (9자리 형식만)
     equipment_codes = collect_school_codes_from_equipment(va_data)
@@ -175,7 +199,7 @@ def run_verification(
         "va_path": str(va_path),
         "school_count": school_count,
         "target_count": target_count,
-        "target_school_list_path": str(DEFAULT_TARGET_SCHOOL_LIST_PATH),
+        "target_school_list_path": str(_resolve_target_list_path(None)),
         "school_list": school_list,
         "missing_from_data": missing_from_data,
         "missing_from_data_df": missing_df,
@@ -202,7 +226,7 @@ def run_verification(
         # 검증 결과 요약 (검증용)
         with open(out / "검증결과_요약.txt", "w", encoding="utf-8") as f:
             f.write(f"대상 가상자산 파일: {va_path}\n")
-            f.write(f"대상 학교 리스트: {DEFAULT_TARGET_SCHOOL_LIST_PATH}\n")
+            f.write(f"대상 학교 리스트: {_resolve_target_list_path(None)}\n")
             f.write(f"대상 학교 수(리스트): {target_count}개\n")
             f.write(f"가상자산 학교정보 학교 수: {school_count}개\n")
             f.write(f"대상인데 데이터에 없는 학교: {len(missing_from_data)}개 → 누락_대상인데_데이터에_없는_학교.csv\n")
@@ -233,7 +257,7 @@ def main() -> None:
 
     print()
     print("=== 대상 학교 리스트 기준 검증 ===")
-    print("대상 학교 리스트: 충남_대상학교_리스트.xlsx")
+    print("대상 학교 리스트:", r.get("target_school_list_path", "output/CNE_LIST.xlsx"))
     print(f"대상(리스트) 학교 수: {r['target_count']}개")
     print(f"가상자산 학교정보 학교 수: {r['school_count']}개")
 
@@ -249,7 +273,7 @@ def main() -> None:
             print("  전체: output/누락_대상인데_데이터에_없는_학교.csv")
     else:
         print()
-        print("→ 대상 719개 학교가 모두 가상자산 학교정보에 있습니다.")
+        print("→ 대상 리스트의 모든 학교가 가상자산 학교정보에 있습니다.")
 
     if r["extra_in_data"]:
         print()
@@ -289,7 +313,7 @@ def list_missing_vs_reference(
     output_path: Path | str | None = None,
 ) -> pd.DataFrame:
     """
-    기준 719개 목록(CSV/엑셀)과 현재 학교 목록을 비교해,
+    기준 목록(CSV/엑셀, 예: CNE_LIST.xlsx)과 현재 학교 목록을 비교해,
     기준에는 있는데 현재 파일에 없는 학교(학교코드, 학교명) 반환.
     reference_719_path: 학교코드 또는 학교명 컬럼이 있는 CSV/엑셀.
     """

@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-
 # Python
 __pycache__/
 *.py[cod]
@@ -19,21 +17,13 @@ Thumbs.db
 .vscode/
 .cursor/
 
-# Local config
-config/paths.local.json
-
-# Outputs / logs
+# Outputs/logs
 output/
 logs/
 *.log
-*.tmp
 
-# Excel temp files
-~$*.xlsx
-
-# Data folders (local/raw)
-data/
-raw/
+# Raw data (다운로드한 구성/자산/충남 등)
 raw_data/
 
-->>>>>>> 7bac18f (초기 프로젝트 구조 및 맥북에어 표준 환경 세팅)
+# Local config
+config/paths.local.json

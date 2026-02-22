@@ -1,12 +1,1 @@
-<<<<<<< HEAD
-﻿{
-  "RAW_ROOT": "G:\\My Drive\\충남대전_원본",
-  "OUT_ROOT": "D:\\CNE_DNI\\output",
-  "LOG_ROOT": "D:\\CNE_DNI\\logs"
-=======
-{
-  "raw_data_root": "SET_ME",
-  "output_root": "./output",
-  "log_root": "./logs"
->>>>>>> 7bac18f (초기 프로젝트 구조 및 맥북에어 표준 환경 세팅)
-}
+{"raw_data_root":"SET_ME","output_root":"./output","log_root":"./logs","target_school_list":"./output/CNE_LIST.xlsx","va_file":"","cfg_file":""}
