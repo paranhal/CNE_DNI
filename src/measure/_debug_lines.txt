@@ -1,0 +1,6 @@
+141: def get_school_values(wb_stats, school_code, school_data, row_def):
+196:         v1, v2 = get_school_values(wb_stats, school_code, school_data, row_def)
+198:             out_val = f"{format_value(v1)} / {format_value(v2)}" if (v1 or v2) else (format_value(v1) or format_value(v2))
+200:             out_val = format_value(v1)
+202:         cell.value = out_val
+213: def main():

@@ -1,0 +1,47 @@
+======================================================================
+어제 vs 오늘 생성 파일 비교
+======================================================================
+
+[어제] 계룡고등학교: y:\CNE_DNI\_지역별 산출물 취합\_00.별첨자료_학교별\CNE\계룡\계룡고등학교_N108140237HS\계룡고등학교_AP 장비 현황 상세.XLSX
+[오늘] 개화초등학교: y:\CNE_DNI\_지역별 산출물 취합\_00.별첨자료_학교별\CNE\보령\개화초등학교_N108171020ES\개화초등학교_AP 장비 현황 상세.XLSX
+
+--- 1. 행/열 수 비교 ---
+  어제: 41행 x 11열
+  오늘: 13행 x 11열
+  ※ 행/열 수 다름!
+
+--- 2. 1~5행 데이터 샘플 (어제) ---
+  행1: ['무선 AP 자산', '', '', '', '', '', '', '', '', '', '']
+  행2: ['장비명', '관리번호', '모델명', '제조사', '학교명', '건물명', '층', '실', '수용망', '비고', 'AP위치']
+  행3: ['무선AP', 'N108140237HS-WIF60001', 'EAP2244', '가온브로드밴드', '계룡고등학교', '본관', '1층', '시청각실', '무선망', '', '8']
+  행4: ['무선AP', 'N108140237HS-WIF60002', 'EAP2244', '가온브로드밴드', '계룡고등학교', '본관', '1층', '컴퓨터실', '무선망', '', '5']
+  행5: ['무선AP', 'N108140237HS-WIF60003', 'W340', '다산네트웍스', '계룡고등학교', '본관', '1층', '상상공작실', '무선망', '', '5']
+
+--- 3. 1~5행 데이터 샘플 (오늘) ---
+  행1: ['', '', '', '', '', '', '', '', '', '', '']
+  행2: ['범례', 'DB에서 가져오는 항목', '', '', '', '풀무농업고등기술학교 AP 가상자산 X', '', '', '', '', '']
+  행3: ['WiFi', 'N108171020ES-WIF60001', 'EAP2244', '가온브로드밴드', '개화초등학교', '충남 보령시 성주면 성주산로 735', '본관', '1', '1학년', '무선망', '']
+  행4: ['WiFi', 'N108171020ES-WIF60002', 'EAP2244', '가온브로드밴드', '개화초등학교', '충남 보령시 성주면 성주산로 735', '본관', '1', '2학년', '무선망', '']
+  행5: ['WiFi', 'N108171020ES-WIF60003', 'EAP2244', '가온브로드밴드', '개화초등학교', '충남 보령시 성주면 성주산로 735', '본관', '2', '3학년', '무선망', '']
+
+--- 4. 1~5행 서식 샘플 (어제) ---
+  행1: ['폰트10.0,맑은고딕,H:center,V:center', '폰트11.0,Calibri', '폰트11.0,Calibri', '폰트11.0,Calibri', '폰트11.0,Calibri', '폰트11.0,Calibri', '폰트11.0,Calibri', '폰트11.0,Calibri', '폰트11.0,Calibri', '폰트11.0,Calibri', '폰트11.0,Calibri']
+  행2: ['굵게,폰트10.0,맑은고딕,배경색O,H:center,V:center', '굵게,폰트10.0,맑은고딕,배경색O,H:center,V:center', '굵게,폰트10.0,맑은고딕,배경색O,H:center,V:center', '굵게,폰트10.0,맑은고딕,배경색O,H:center,V:center', '굵게,폰트10.0,맑은고딕,배경색O,H:center,V:center', '굵게,폰트10.0,맑은고딕,배경색O,H:center,V:center', '굵게,폰트10.0,맑은고딕,배경색O,H:center,V:center', '굵게,폰트10.0,맑은고딕,배경색O,H:center,V:center', '굵게,폰트10.0,맑은고딕,배경색O,H:center,V:center', '굵게,폰트10.0,맑은고딕,배경색O,H:center,V:center', '굵게,폰트10.0,맑은고딕,배경색O,H:center,V:center']
+  행3: ['폰트10.0,맑은고딕,H:center,V:center', '폰트10.0,맑은고딕,H:center,V:center', '폰트10.0,맑은고딕,H:center,V:center', '폰트10.0,맑은고딕,H:center,V:center', '폰트10.0,맑은고딕,H:center,V:center', '폰트10.0,맑은고딕,H:center,V:center', '폰트10.0,맑은고딕,H:center,V:center', '폰트10.0,맑은고딕,H:center,V:center', '폰트10.0,맑은고딕,H:center,V:center', '폰트10.0,맑은고딕,H:center,V:center', '폰트10.0,맑은고딕,H:center,V:center']
+  행4: ['폰트10.0,맑은고딕,H:center,V:center', '폰트10.0,맑은고딕,H:center,V:center', '폰트10.0,맑은고딕,H:center,V:center', '폰트10.0,맑은고딕,H:center,V:center', '폰트10.0,맑은고딕,H:center,V:center', '폰트10.0,맑은고딕,H:center,V:center', '폰트10.0,맑은고딕,H:center,V:center', '폰트10.0,맑은고딕,H:center,V:center', '폰트10.0,맑은고딕,H:center,V:center', '폰트10.0,맑은고딕,H:center,V:center', '폰트10.0,맑은고딕,H:center,V:center']
+  행5: ['폰트10.0,맑은고딕,H:center,V:center', '폰트10.0,맑은고딕,H:center,V:center', '폰트10.0,맑은고딕,H:center,V:center', '폰트10.0,맑은고딕,H:center,V:center', '폰트10.0,맑은고딕,H:center,V:center', '폰트10.0,맑은고딕,H:center,V:center', '폰트10.0,맑은고딕,H:center,V:center', '폰트10.0,맑은고딕,H:center,V:center', '폰트10.0,맑은고딕,H:center,V:center', '폰트10.0,맑은고딕,H:center,V:center', '폰트10.0,맑은고딕,H:center,V:center']
+
+--- 5. 1~5행 서식 샘플 (오늘) ---
+  행1: ['폰트10.0,맑은고딕,배경색O,H:center,V:center', '폰트11.0,Calibri', '폰트11.0,Calibri', '폰트11.0,Calibri', '폰트11.0,Calibri', '폰트11.0,Calibri', '폰트11.0,Calibri', '폰트11.0,Calibri', '폰트11.0,Calibri', '폰트11.0,Calibri', '폰트11.0,Calibri']
+  행2: ['굵게,폰트10.0,맑은고딕,배경색O,H:center,V:center', '폰트10.0,맑은고딕,배경색O,H:center,V:center', '폰트11.0,Calibri', '폰트11.0,Calibri', '폰트10.0,맑은고딕,배경색O,H:center,V:center', '폰트10.0,맑은고딕,배경색O,H:center,V:center', '폰트10.0,맑은고딕,배경색O,H:center,V:center', '폰트10.0,맑은고딕,배경색O,H:center,V:center', '폰트10.0,맑은고딕,배경색O,H:center,V:center', '폰트10.0,맑은고딕,배경색O,H:center,V:center', '폰트10.0,맑은고딕,배경색O,H:center,V:center']
+  행3: ['폰트11.0,Calibri,H:left,V:center', '폰트11.0,Calibri,H:left,V:center', '폰트11.0,Calibri,H:left,V:center', '폰트11.0,Calibri,H:left,V:center', '폰트11.0,Calibri,H:left,V:center', '폰트11.0,Calibri,H:left,V:center', '폰트11.0,Calibri,H:left,V:center', '폰트11.0,Calibri,H:left,V:center', '폰트11.0,Calibri,H:left,V:center', '폰트11.0,Calibri,H:left,V:center', '폰트11.0,Calibri,H:left,V:center']
+  행4: ['폰트11.0,Calibri,H:left,V:center', '폰트11.0,Calibri,H:left,V:center', '폰트11.0,Calibri,H:left,V:center', '폰트11.0,Calibri,H:left,V:center', '폰트11.0,Calibri,H:left,V:center', '폰트11.0,Calibri,H:left,V:center', '폰트11.0,Calibri,H:left,V:center', '폰트11.0,Calibri,H:left,V:center', '폰트11.0,Calibri,H:left,V:center', '폰트11.0,Calibri,H:left,V:center', '폰트11.0,Calibri,H:left,V:center']
+  행5: ['폰트11.0,Calibri,H:left,V:center', '폰트11.0,Calibri,H:left,V:center', '폰트11.0,Calibri,H:left,V:center', '폰트11.0,Calibri,H:left,V:center', '폰트11.0,Calibri,H:left,V:center', '폰트11.0,Calibri,H:left,V:center', '폰트11.0,Calibri,H:left,V:center', '폰트11.0,Calibri,H:left,V:center', '폰트11.0,Calibri,H:left,V:center', '폰트11.0,Calibri,H:left,V:center', '폰트11.0,Calibri,H:left,V:center']
+
+--- 6. 행 높이 ---
+  어제: 40개 행에 높이 설정
+  오늘: 1개 행에 높이 설정
+
+--- 7. 열 넓이 ---
+  어제: 11개 열에 넓이 설정
+  오늘: 11개 열에 넓이 설정
