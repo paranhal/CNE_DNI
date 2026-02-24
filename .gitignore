@@ -26,7 +26,7 @@ output/
 logs/
 *.log
 
-# Raw data
+# Raw data (다운로드한 구성/자산/충남 등)
 raw_data/
 
 # Local config
