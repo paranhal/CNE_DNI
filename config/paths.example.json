@@ -1,5 +1,1 @@
-﻿{
-  "RAW_ROOT": "G:\\My Drive\\충남대전_원본",
-  "OUT_ROOT": "D:\\CNE_DNI\\output",
-  "LOG_ROOT": "D:\\CNE_DNI\\logs"
-}
+{"raw_data_root":"SET_ME","output_root":"./output","log_root":"./logs","target_school_list":"./output/CNE_LIST.xlsx","va_file":"","cfg_file":""}
