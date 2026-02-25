@@ -32,6 +32,11 @@ raw_data/
 # Local config
 config/paths.local.json
 
+# Excel temp lock files
+~$*.xlsx
+~$*.xlsm
+
 # Measure: generated outputs (large)
 src/measure/CNE/학교별_리포트_V1.1/
 src/measure/CNE/학교별_리포트/
+src/measure/DNI/학교별_리포트/
