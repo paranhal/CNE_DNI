@@ -25,19 +25,47 @@ DNI_ISP_MEANSURE.XLSX → DNI_ISP_MEASURE.XLSX 변환 스크립트 (대전 ISP 1
 from __future__ import annotations
 
 import os
+import sys
 from typing import Optional, Tuple, List
 
 from openpyxl import load_workbook
 
-# measure 폴더 기준 경로 계산
-_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DNI_DIR = os.path.join(_BASE_DIR, "DNI")
+if getattr(sys, "frozen", False):
+    _BASE_DIR = os.path.dirname(sys.executable)
+else:
+    _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+_RUN_DIR = os.getcwd()
 
 INPUT_FILENAME = "DNI_ISP_MEANSURE.XLSX"
 OUTPUT_FILENAME = "DNI_ISP_MEASURE.XLSX"
 
-INPUT_PATH = os.path.join(DNI_DIR, INPUT_FILENAME)
-OUTPUT_PATH = os.path.join(DNI_DIR, OUTPUT_FILENAME)
+def _pick_existing(candidates):
+    for p in candidates:
+        if os.path.isfile(p):
+            return p
+    return candidates[0]
+
+
+def _resolve_input_path():
+    return _pick_existing(
+        [
+            os.path.join(_RUN_DIR, INPUT_FILENAME),
+            os.path.join(_RUN_DIR, "DNI", INPUT_FILENAME),
+            os.path.join(_BASE_DIR, INPUT_FILENAME),
+            os.path.join(_BASE_DIR, "DNI", INPUT_FILENAME),
+        ]
+    )
+
+
+def _resolve_output_path(input_path):
+    in_dir = os.path.dirname(input_path) if input_path else _RUN_DIR
+    if in_dir and os.path.isdir(in_dir):
+        return os.path.join(in_dir, OUTPUT_FILENAME)
+    return os.path.join(_RUN_DIR, OUTPUT_FILENAME)
+
+
+INPUT_PATH = _resolve_input_path()
+OUTPUT_PATH = _resolve_output_path(INPUT_PATH)
 
 
 def _log(msg: str) -> None:
@@ -109,10 +137,10 @@ def select_final_values(
 def process_dni_isp_meansure(
     input_path: str = INPUT_PATH,
     output_path: str = OUTPUT_PATH,
-) -> None:
+) -> bool:
     if not os.path.isfile(input_path):
         _log(f"[오류] 입력 파일을 찾을 수 없습니다: {input_path}")
-        return
+        return False
 
     _log("=" * 60)
     _log("[DNI ISP] DNI_ISP_MEANSURE.XLSX → DNI_ISP_MEASURE.XLSX 변환 시작")
@@ -200,10 +228,11 @@ def process_dni_isp_meansure(
     wb.close()
 
     _log(f"[완료] 변환 완료 → {output_path}")
+    return True
 
 
-def main() -> None:
-    process_dni_isp_meansure()
+def main() -> bool:
+    return process_dni_isp_meansure()
 
 
 if __name__ == "__main__":

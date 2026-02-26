@@ -19,32 +19,59 @@ DNI_FULLLOAD_MEASURE.xlsx 전부하_통합 시트 - 최종 측정값 선정
 from __future__ import annotations
 
 import os
+import sys
 from collections import defaultdict
 
 from openpyxl import load_workbook
 
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DNI_DIR = os.path.join(BASE_DIR, "DNI")
-INPUT_PATH = os.path.join(DNI_DIR, "DNI_FULLLOAD_MEASURE.xlsx")
+if getattr(sys, "frozen", False):
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+RUN_DIR = os.getcwd()
+
+
+def _pick_existing(candidates):
+    for p in candidates:
+        if os.path.isfile(p):
+            return p
+    return candidates[0]
+
+
+INPUT_PATH = _pick_existing(
+    [
+        os.path.join(RUN_DIR, "DNI_FULLLOAD_MEASURE.xlsx"),
+        os.path.join(RUN_DIR, "DNI", "DNI_FULLLOAD_MEASURE.xlsx"),
+        os.path.join(BASE_DIR, "DNI_FULLLOAD_MEASURE.xlsx"),
+        os.path.join(BASE_DIR, "DNI", "DNI_FULLLOAD_MEASURE.xlsx"),
+    ]
+)
 MAX_DEVICES = 10
+TRACE_SCHOOL_CODE = (os.environ.get("TRACE_SCHOOL_CODE") or "").strip()
 
 
 def _log(msg: str) -> None:
     print(msg, flush=True)
 
 
-def main() -> None:
-    if not os.path.isfile(INPUT_PATH):
-        _log(f"[오류] 파일이 없습니다: {INPUT_PATH}")
-        return
+def _school_code_from_mgmt(v) -> str:
+    s = (str(v).strip() if v is not None else "")
+    return s[:12] if len(s) >= 12 else ""
+
+
+def main(input_path=None) -> None:
+    input_path = input_path or INPUT_PATH
+    if not os.path.isfile(input_path):
+        _log(f"[오류] 파일이 없습니다: {input_path}")
+        return False
 
     _log("=" * 60)
     _log("[DNI 전부하] 최종 측정값 선정")
-    _log(f"대상: {INPUT_PATH}")
+    _log(f"대상: {input_path}")
     _log("=" * 60)
 
-    wb = load_workbook(INPUT_PATH, data_only=False)
+    wb = load_workbook(input_path, data_only=False)
     ws = wb["전부하_통합"] if "전부하_통합" in wb.sheetnames else wb[wb.sheetnames[0]]
     max_row = ws.max_row
     _log(f"시트: {ws.title} | 행 수: {max_row}")
@@ -82,6 +109,15 @@ def main() -> None:
 
     for school, rows in school_rows.items():
         rows_sorted = sorted(rows)
+        traced = False
+        traced_code = ""
+        if TRACE_SCHOOL_CODE:
+            for rr in rows_sorted:
+                code_try = _school_code_from_mgmt(ws.cell(row=rr, column=3).value)
+                if code_try:
+                    traced_code = code_try
+                    break
+            traced = traced_code == TRACE_SCHOOL_CODE
 
         # 1차/2차 데이터 수집
         data_1st_good = []   # 1차 양호: [(row, (i,j,k,l,m,n)), ...]
@@ -142,6 +178,14 @@ def main() -> None:
             final_data += [v for _, v in data_2nd_good]
             need_more = device_count - len(final_data)
             final_data += [v for _, v in data_1st_bad[:need_more]]
+
+        if traced:
+            _log(
+                f"[TRACE][전부하_통합 선정] {school}({traced_code}) "
+                f"rows={len(rows_sorted)} count_1st={count_1st} count_2nd={count_2nd} "
+                f"1차양호={n_1g} 2차양호={n_2g} 1차미흡={n_1b} device_count={device_count} "
+                f"final={len(final_data)}"
+            )
 
         # C~H에 기록
         for i, vals in enumerate(final_data):
@@ -212,7 +256,17 @@ def main() -> None:
             if isinstance(g, (int, float)):
                 ch_vals.append(g)
 
+        traced = bool(TRACE_SCHOOL_CODE and school_code == TRACE_SCHOOL_CODE)
+        if traced:
+            _log(
+                f"[TRACE][전부하 평균 전] {school}({school_code}) "
+                f"dl_cnt={len(dl_vals)} ul_cnt={len(ul_vals)} "
+                f"rssi_cnt={len(rssi_vals)} ch_cnt={len(ch_vals)}"
+            )
+
         if not dl_vals and not ul_vals:
+            if traced:
+                _log("[TRACE][전부하 평균 스킵] 다운로드/업로드 값이 없어 평균 시트에서 제외")
             continue
 
         avg_dl = sum(dl_vals) / len(dl_vals) if dl_vals else 0
@@ -231,21 +285,28 @@ def main() -> None:
         ws_avg.cell(row=avg_row, column=6).value = round(avg_ch, 2)
         ws_avg.cell(row=avg_row, column=7).value = diag_dl
         ws_avg.cell(row=avg_row, column=8).value = diag_ul
+        if traced:
+            _log(
+                f"[TRACE][전부하 평균 저장] row={avg_row} "
+                f"DL={round(avg_dl,2)} UL={round(avg_ul,2)} RSSI={round(avg_rssi,2)} CH={round(avg_ch,2)} "
+                f"diag=({diag_dl},{diag_ul})"
+            )
         avg_row += 1
 
     _log(f"[4단계] '{SHEET_AVG}' 시트 생성: {avg_row - 2}개 학교 평균")
 
     from datetime import datetime
-    out_path = INPUT_PATH
+    out_path = input_path
     try:
         wb.save(out_path)
     except PermissionError:
         stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        out_path = os.path.join(DNI_DIR, f"DNI_FULLLOAD_MEASURE_final_{stamp}.xlsx")
+        out_path = os.path.join(os.path.dirname(input_path), f"DNI_FULLLOAD_MEASURE_final_{stamp}.xlsx")
         _log(f"[경고] 원본 열림 → 대신 저장: {out_path}")
         wb.save(out_path)
     wb.close()
     _log(f"[완료] 저장: {out_path}")
+    return True
 
 
 if __name__ == "__main__":

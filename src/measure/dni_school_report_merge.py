@@ -21,9 +21,7 @@ from tqdm import tqdm
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DNI_DIR = os.path.join(BASE_DIR, "DNI")
-REPORT_DIR = os.path.join(DNI_DIR, "학교별_리포트")
-STATS_FILE = os.path.join(DNI_DIR, "DNI_TOTAL_MEASURE_LIST_V1.xlsx")
-OUTPUT_FILE = os.path.join(DNI_DIR, "DNI_학교별_문제점분석_통합.xlsx")
+RUN_DIR = os.getcwd()
 
 SHEET_NAME = "문제점분석"
 DATA_ROWS = list(range(2, 35))  # 2~34행
@@ -67,12 +65,77 @@ ITEM_NAMES = {
 }
 
 
-def load_region_map():
+def _input(prompt):
+    try:
+        return input(prompt).strip()
+    except (EOFError, KeyboardInterrupt):
+        print("\n[중단] 사용자 입력으로 종료합니다.")
+        sys.exit(1)
+
+
+def _pick_file(prompt, candidates):
+    existing = [p for p in candidates if os.path.isfile(p)]
+    if existing:
+        print(f"\n{prompt}")
+        for i, p in enumerate(existing, 1):
+            print(f"  {i}. {p}")
+        print("  0. 직접 경로 입력")
+        s = _input("번호 선택 (Enter: 1번): ")
+        if not s:
+            return existing[0]
+        if s == "0":
+            return _input("전체 경로 입력: ")
+        try:
+            idx = int(s)
+            if 1 <= idx <= len(existing):
+                return existing[idx - 1]
+        except ValueError:
+            pass
+        print("[경고] 잘못된 입력. 1번 사용")
+        return existing[0]
+    print(f"\n{prompt}")
+    print("  후보 파일이 없어 직접 경로를 입력하세요.")
+    return _input("전체 경로 입력: ")
+
+
+def _pick_report_dir():
+    candidates = [
+        os.path.join(RUN_DIR, "학교별_리포트"),
+        os.path.join(RUN_DIR, "학교별_리포트_V1.1"),
+        os.path.join(BASE_DIR, "DNI", "학교별_리포트"),
+        os.path.join(BASE_DIR, "CNE", "학교별_리포트"),
+        os.path.join(BASE_DIR, "DNI", "학교별_리포트_V1.1"),
+        os.path.join(BASE_DIR, "CNE", "학교별_리포트_V1.1"),
+    ]
+    existing = [p for p in candidates if os.path.isdir(p)]
+    if existing:
+        print("\n학교별 리포트 폴더를 선택하세요.")
+        for i, p in enumerate(existing, 1):
+            print(f"  {i}. {p}")
+        print("  0. 직접 경로 입력")
+        s = _input("번호 선택 (Enter: 1번): ")
+        if not s:
+            return existing[0]
+        if s == "0":
+            return _input("폴더 전체 경로 입력: ")
+        try:
+            idx = int(s)
+            if 1 <= idx <= len(existing):
+                return existing[idx - 1]
+        except ValueError:
+            pass
+        print("[경고] 잘못된 입력. 1번 사용")
+        return existing[0]
+    print("\n학교별 리포트 폴더를 찾지 못했습니다. 직접 경로를 입력하세요.")
+    return _input("폴더 전체 경로 입력: ")
+
+
+def load_region_map(stats_file):
     """Sheet1에서 학교코드 → 지역 매핑"""
     code_to_region = {}
-    if not os.path.isfile(STATS_FILE):
+    if not os.path.isfile(stats_file):
         return code_to_region
-    wb = load_workbook(STATS_FILE, data_only=True, read_only=True)
+    wb = load_workbook(stats_file, data_only=True, read_only=True)
     if "Sheet1" in wb.sheetnames:
         ws = wb["Sheet1"]
         for r in range(2, ws.max_row + 1):
@@ -114,22 +177,51 @@ def main():
     print("[대전(DNI) 학교별 리포트 통합] 가로형 생성")
     print("=" * 50)
 
-    if not os.path.isdir(REPORT_DIR):
-        print(f"[오류] 리포트 폴더 없음: {REPORT_DIR}")
+    report_dir = _pick_report_dir()
+    stats_file = _pick_file(
+        "통계 파일(TOTAL_MEASURE_LIST)을 선택하세요.",
+        [
+            os.path.join(RUN_DIR, "DNI_TOTAL_MEASURE_LIST_V1.xlsx"),
+            os.path.join(RUN_DIR, "TOTAL_MEASURE_LIST_V1.xlsx"),
+            os.path.join(RUN_DIR, "CNE", "TOTAL_MEASURE_LIST_V1.xlsx"),
+            os.path.join(BASE_DIR, "DNI", "DNI_TOTAL_MEASURE_LIST_V1.xlsx"),
+            os.path.join(BASE_DIR, "DNI", "TOTAL_MEASURE_LIST_V1.xlsx"),
+            os.path.join(BASE_DIR, "CNE", "TOTAL_MEASURE_LIST_V1.xlsx"),
+        ],
+    )
+    default_out_name = "DNI_학교별_문제점분석_통합.xlsx"
+    out_name = _input(f"\n출력 파일명 입력 (Enter: {default_out_name}): ")
+    out_name = out_name if out_name else default_out_name
+    if not out_name.lower().endswith(".xlsx"):
+        out_name += ".xlsx"
+    output_file = os.path.join(RUN_DIR, out_name)
+
+    print(f"\n선택된 리포트 폴더: {report_dir}")
+    print(f"선택된 통계 파일: {stats_file}")
+    print(f"출력 파일: {output_file}")
+
+    if not os.path.isdir(report_dir):
+        print(f"[오류] 리포트 폴더 없음: {report_dir}")
+        sys.exit(1)
+    if not os.path.isfile(stats_file):
+        print(f"[오류] 통계 파일 없음: {stats_file}")
         sys.exit(1)
 
-    files = sorted([f for f in os.listdir(REPORT_DIR)
-                     if f.endswith(".xlsx") and not f.startswith("~")])
-    files = [f for f in files if not os.path.isdir(os.path.join(REPORT_DIR, f))]
+    files = []
+    for dp, _, fs in os.walk(report_dir):
+        for f in fs:
+            if f.endswith(".xlsx") and not f.startswith("~"):
+                files.append(os.path.join(dp, f))
+    files = sorted(files)
     print(f"대상 파일: {len(files)}개")
 
-    code_to_region = load_region_map()
+    code_to_region = load_region_map(stats_file)
 
     headers = build_headers()
     rows_data = []
 
-    for fname in tqdm(files, desc="파일 읽기", unit="교"):
-        filepath = os.path.join(REPORT_DIR, fname)
+    for filepath in tqdm(files, desc="파일 읽기", unit="교"):
+        fname = os.path.basename(filepath)
         parts = fname.rsplit("_", 1)
         if len(parts) < 2:
             continue
@@ -208,10 +300,10 @@ def main():
     ws.freeze_panes = "D2"
 
     try:
-        wb.save(OUTPUT_FILE)
-        print(f"[완료] 저장: {OUTPUT_FILE}")
+        wb.save(output_file)
+        print(f"[완료] 저장: {output_file}")
     except PermissionError:
-        alt = OUTPUT_FILE.replace(".xlsx", f"_{datetime.now().strftime('%H%M%S')}.xlsx")
+        alt = output_file.replace(".xlsx", f"_{datetime.now().strftime('%H%M%S')}.xlsx")
         wb.save(alt)
         print(f"[완료] 저장: {alt}")
 

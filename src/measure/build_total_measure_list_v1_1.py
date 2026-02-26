@@ -21,6 +21,8 @@ sys.path.insert(0, _MEASURE_DIR)
 
 from school_report_config_v1_1 import TOTAL_MEASURE_LIST, CNE_DIR
 
+TRACE_SCHOOL_CODE = (os.environ.get("TRACE_SCHOOL_CODE") or "").strip()
+
 # 소스 파일 및 시트 (있으면 복사, 없으면 스킵)
 SOURCES = [
     (os.path.join(CNE_DIR, "CNE_FULLLOAD_MEASURE.xlsx"), "전부하측정_학교별평균"),
@@ -44,6 +46,7 @@ def main():
     wb = Workbook()
     wb.remove(wb.active)
     copied = set()
+    trace_summary = []
     for path, sheet_name in SOURCES:
         if sheet_name in copied:
             continue
@@ -63,6 +66,26 @@ def main():
             wb_src.close()
             print(f"  [복사] {sheet_name} <- {os.path.basename(path)}")
             copied.add(sheet_name)
+
+            if TRACE_SCHOOL_CODE:
+                # 학교코드 위치 탐색 후 추적 대상 행 샘플 출력
+                code_col = 1
+                for c in range(1, min(50, ws_dst.max_column + 1)):
+                    h = str(ws_dst.cell(1, c).value or "").strip().lower()
+                    if "학교코드" in h or h == "code" or h.endswith("code"):
+                        code_col = c
+                        break
+                hit_row = None
+                for r in range(2, ws_dst.max_row + 1):
+                    v = str(ws_dst.cell(r, code_col).value or "").strip()
+                    if v == TRACE_SCHOOL_CODE:
+                        hit_row = r
+                        break
+                if hit_row:
+                    vals = [ws_dst.cell(hit_row, c).value for c in range(1, min(11, ws_dst.max_column + 1))]
+                    trace_summary.append((sheet_name, hit_row, vals))
+                else:
+                    trace_summary.append((sheet_name, None, []))
         except Exception as e:
             print(f"  [오류] {path}: {e}")
     if len(copied) == 0:
@@ -71,6 +94,13 @@ def main():
     os.makedirs(os.path.dirname(TOTAL_MEASURE_LIST), exist_ok=True)
     wb.save(TOTAL_MEASURE_LIST)
     print(f"[완료] {TOTAL_MEASURE_LIST}")
+    if TRACE_SCHOOL_CODE:
+        print(f"[TRACE][TOTAL 병합] 학교코드={TRACE_SCHOOL_CODE}")
+        for sn, rr, vals in trace_summary:
+            if rr is None:
+                print(f"  - {sn}: 없음")
+            else:
+                print(f"  - {sn}: row={rr} A~J={vals}")
 
 
 if __name__ == "__main__":

@@ -20,16 +20,42 @@ from __future__ import annotations
 
 import csv
 import os
+import sys
 from collections import defaultdict
 
 from openpyxl import load_workbook
 
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DNI_DIR = os.path.join(BASE_DIR, "DNI")
-SPLIT_DIR = os.path.join(os.path.dirname(BASE_DIR), "split")
-INPUT_PATH = os.path.join(DNI_DIR, "DNO_FULLLOAD_MEANSURE_수정.xlsx")
-SCHOOL_LIST_CSV = os.path.join(SPLIT_DIR, "school_reg_list_DNI.csv")
+if getattr(sys, "frozen", False):
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+RUN_DIR = os.getcwd()
+
+
+def _pick_existing(candidates):
+    for p in candidates:
+        if os.path.isfile(p):
+            return p
+    return candidates[0]
+
+
+INPUT_PATH = _pick_existing(
+    [
+        os.path.join(RUN_DIR, "DNO_FULLLOAD_MEANSURE_수정.xlsx"),
+        os.path.join(RUN_DIR, "DNI", "DNO_FULLLOAD_MEANSURE_수정.xlsx"),
+        os.path.join(BASE_DIR, "DNO_FULLLOAD_MEANSURE_수정.xlsx"),
+        os.path.join(BASE_DIR, "DNI", "DNO_FULLLOAD_MEANSURE_수정.xlsx"),
+    ]
+)
+SCHOOL_LIST_CSV = _pick_existing(
+    [
+        os.path.join(RUN_DIR, "school_reg_list_DNI.csv"),
+        os.path.join(RUN_DIR, "split", "school_reg_list_DNI.csv"),
+        os.path.join(BASE_DIR, "split", "school_reg_list_DNI.csv"),
+        os.path.join(os.path.dirname(BASE_DIR), "split", "school_reg_list_DNI.csv"),
+    ]
+)
 SCHOOL_CODE_LEN = 12
 
 
@@ -67,17 +93,19 @@ def load_code_to_name(path: str) -> dict[str, str]:
     return code_to_name
 
 
-def main() -> None:
-    if not os.path.isfile(INPUT_PATH):
-        _log(f"[오류] 파일이 없습니다: {INPUT_PATH}")
-        return
+def main(input_path=None, school_list_csv=None) -> None:
+    input_path = input_path or INPUT_PATH
+    school_list_csv = school_list_csv or SCHOOL_LIST_CSV
+    if not os.path.isfile(input_path):
+        _log(f"[오류] 파일이 없습니다: {input_path}")
+        return False
 
     _log("=" * 60)
     _log("[DNI 전부하 v2] V열 관리번호 → W학교코드·X학교명, B-X 매칭 → N~R 복사")
-    _log(f"대상 파일: {INPUT_PATH}")
+    _log(f"대상 파일: {input_path}")
     _log("=" * 60)
 
-    wb = load_workbook(INPUT_PATH, data_only=False)
+    wb = load_workbook(input_path, data_only=False)
     sheetnames = wb.sheetnames
     ws = wb["전부하_통합"] if "전부하_통합" in sheetnames else wb[sheetnames[0]]
 
@@ -95,11 +123,11 @@ def main() -> None:
     def _norm(s):
         return (str(s).strip() if s is not None else "") or ""
 
-    code_to_name = load_code_to_name(SCHOOL_LIST_CSV)
+    code_to_name = load_code_to_name(school_list_csv)
     if not code_to_name:
         _log("[오류] school_reg_list_DNI 로드 실패. 진행 중단.")
         wb.close()
-        return
+        return False
 
     # 1단계: N~R 비우기
     for r in range(2, max_row + 1):
@@ -168,16 +196,18 @@ def main() -> None:
 
     from datetime import datetime
     out_path = INPUT_PATH
+    out_path = input_path
     try:
         wb.save(out_path)
     except PermissionError:
         stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        out_path = os.path.join(DNI_DIR, f"DNO_FULLLOAD_MEANSURE_수정_merged_{stamp}.xlsx")
+        out_path = os.path.join(os.path.dirname(input_path), f"DNO_FULLLOAD_MEANSURE_수정_merged_{stamp}.xlsx")
         _log(f"[경고] 원본이 열려 있어 대신 저장: {out_path}")
         wb.save(out_path)
     wb.close()
 
     _log(f"[완료] N=장비관리번호·O~R=측정값 복사: {updated}행")
+    return True
 
 
 if __name__ == "__main__":

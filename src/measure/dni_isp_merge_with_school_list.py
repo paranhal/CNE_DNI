@@ -22,15 +22,41 @@ from __future__ import annotations
 
 import csv
 import os
+import sys
 from typing import Dict, Any
 
 from openpyxl import load_workbook
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-SPLIT_DIR = os.path.join(os.path.dirname(BASE_DIR), "split")
+if getattr(sys, "frozen", False):
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+RUN_DIR = os.getcwd()
 
-SCHOOL_LIST_PATH = os.path.join(SPLIT_DIR, "school_reg_list_DNI.csv")
-DNI_ISP_MEASURE_PATH = os.path.join(BASE_DIR, "DNI", "DNI_ISP_MEASURE.XLSX")
+def _pick_existing(candidates):
+    for p in candidates:
+        if os.path.isfile(p):
+            return p
+    return candidates[0]
+
+
+SCHOOL_LIST_PATH = _pick_existing(
+    [
+        os.path.join(RUN_DIR, "school_reg_list_DNI.csv"),
+        os.path.join(RUN_DIR, "split", "school_reg_list_DNI.csv"),
+        os.path.join(BASE_DIR, "split", "school_reg_list_DNI.csv"),
+        os.path.join(os.path.dirname(BASE_DIR), "split", "school_reg_list_DNI.csv"),
+    ]
+)
+DNI_ISP_MEASURE_PATH = _pick_existing(
+    [
+        os.path.join(RUN_DIR, "DNI_ISP_MEASURE.XLSX"),
+        os.path.join(RUN_DIR, "DNI", "DNI_ISP_MEASURE.XLSX"),
+        os.path.join(BASE_DIR, "DNI_ISP_MEASURE.XLSX"),
+        os.path.join(BASE_DIR, "DNI", "DNI_ISP_MEASURE.XLSX"),
+    ]
+)
+TRACE_SCHOOL_CODE = (os.environ.get("TRACE_SCHOOL_CODE") or "").strip()
 
 
 def _log(msg: str) -> None:
@@ -147,17 +173,19 @@ def load_isp_avg_by_school(path: str) -> Dict[str, dict[str, Any]]:
     return by_school
 
 
-def merge_to_new_sheet():
-    schools = load_school_list(SCHOOL_LIST_PATH)
-    isp_by_school = load_isp_avg_by_school(DNI_ISP_MEASURE_PATH)
+def merge_to_new_sheet(school_list_path=None, isp_measure_path=None):
+    school_list_path = school_list_path or SCHOOL_LIST_PATH
+    isp_measure_path = isp_measure_path or DNI_ISP_MEASURE_PATH
+    schools = load_school_list(school_list_path)
+    isp_by_school = load_isp_avg_by_school(isp_measure_path)
     if not schools:
-        return
+        return False
 
-    if not os.path.isfile(DNI_ISP_MEASURE_PATH):
-        _log(f"[오류] ISP 파일이 없습니다: {DNI_ISP_MEASURE_PATH}")
-        return
+    if not os.path.isfile(isp_measure_path):
+        _log(f"[오류] ISP 파일이 없습니다: {isp_measure_path}")
+        return False
 
-    wb = load_workbook(DNI_ISP_MEASURE_PATH, data_only=True)
+    wb = load_workbook(isp_measure_path, data_only=True)
 
     sheet_name = "ISP_315학교"
     if sheet_name in wb.sheetnames:
@@ -191,6 +219,8 @@ def merge_to_new_sheet():
         rec = isp_by_school.get(code)
         if not rec:
             missing_count += 1
+            if TRACE_SCHOOL_CODE and code == TRACE_SCHOOL_CODE:
+                _log("[TRACE][ISP_315학교] 매칭 데이터 없음 -> 빈칸 유지")
             continue
 
         ws_out.cell(row=i, column=4, value=rec.get("download", ""))
@@ -200,18 +230,25 @@ def merge_to_new_sheet():
         ws_out.cell(row=i, column=8, value=rec.get("ch", ""))
         ws_out.cell(row=i, column=9, value=rec.get("diag_dl", ""))
         ws_out.cell(row=i, column=10, value=rec.get("diag_ul", ""))
+        if TRACE_SCHOOL_CODE and code == TRACE_SCHOOL_CODE:
+            _log(
+                "[TRACE][ISP_315학교] 저장 "
+                f"DL={rec.get('download','')} UL={rec.get('upload','')} "
+                f"RTT={rec.get('rtt','')} RSSI={rec.get('rssi','')} CH={rec.get('ch','')}"
+            )
 
-    wb.save(DNI_ISP_MEASURE_PATH)
+    wb.save(isp_measure_path)
     wb.close()
 
     _log(f"[완료] {sheet_name} 시트 생성 완료 (총 {len(schools)}개 학교, ISP 데이터 없는 학교 {missing_count}개)")
+    return True
 
 
 def main():
     _log("=" * 60)
     _log("[DNI ISP] school_reg_list_DNI + ISP측정_학교별평균 통합 (315개 기준)")
     _log("=" * 60)
-    merge_to_new_sheet()
+    return merge_to_new_sheet()
 
 
 if __name__ == "__main__":
