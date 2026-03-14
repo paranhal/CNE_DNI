@@ -785,10 +785,60 @@ def _build_fullload_rows(
     return out
 
 
+def _count_fullload_rows(school_groups: list[list[dict]]) -> int:
+    """학교 그룹 리스트에 대해 생성될 전부하 행 수를 계산 (실제 생성 없이)."""
+    total = 0
+    for devices in school_groups:
+        if not devices:
+            continue
+        N = len(devices)
+        ramp_seconds = (N - 1) * SEC_BETWEEN_DEVICES if N >= 2 else 0
+        ramp_rows = 2 * sum(ramp_seconds - d * SEC_BETWEEN_DEVICES for d in range(N - 1)) if ramp_seconds > 0 else 0
+        main_rows = N * SEC_MAIN_RECORD * 2  # 10분 DL + UL
+        total += ramp_rows + main_rows
+    return total
+
+
 # Excel 시트 최대 행 수(1,048,576). 지역별 분산 시 한 파일이 이 한도를 넘지 않도록 함.
 EXCEL_MAX_DATA_ROWS = 1_048_575
 # 한 지역 내에서 행이 한도 초과 시, 학교 단위로 잘라 쓸 때 한 파일당 최대 학교 수.
 SCHOOLS_PER_FILE = 80
+
+
+def _partition_groups_by_row_limit(
+    groups: list[list[dict]], max_rows: int
+) -> list[list[list[dict]]]:
+    """
+    학교 그룹 리스트를 행 한도 이하로 나누되, 파일별 행 수를 반반 정도로 균등 분할.
+    학교 경계에서만 잘라서 한 학교 데이터가 여러 파일에 쪼개지지 않도록 함.
+    """
+    if not groups:
+        return []
+    counts = [_count_fullload_rows([g]) for g in groups]
+    total = sum(counts)
+    if total <= max_rows:
+        return [groups]
+    K = max(2, (total + max_rows - 1) // max_rows)  # 필요 파일 수(최소 2로 반반 분할)
+    target_per_file = total / K
+    buckets: list[list[list[dict]]] = []
+    idx = 0
+    for k in range(K):
+        if idx >= len(groups):
+            break
+        bucket: list[list[dict]] = []
+        bucket_rows = 0
+        while idx < len(groups):
+            c = counts[idx]
+            if bucket_rows + c > max_rows and bucket:
+                break
+            if k < K - 1 and bucket_rows >= target_per_file and bucket:
+                break
+            bucket.append(groups[idx])
+            bucket_rows += c
+            idx += 1
+        if bucket:
+            buckets.append(bucket)
+    return buckets
 
 
 def _sanitize_region_for_filename(region: str) -> str:
@@ -851,17 +901,21 @@ def run_phase(wb, sheet_name: str, mapping: dict[str, int], phase_label: str, ou
         part = 1
         while start < len(groups_in_region):
             chunk = groups_in_region[start : start + SCHOOLS_PER_FILE]
-            out_rows = _build_fullload_rows(chunk, phase_label, seed_offset)
-            if not out_rows:
+            total_rows = _count_fullload_rows(chunk)
+            if total_rows > EXCEL_MAX_DATA_ROWS:
+                # 행 한도 초과 시 학교 경계로 균등 분할(반반 정도), 한 파일에 최대치 채우지 않음
+                sub_chunks = _partition_groups_by_row_limit(chunk, EXCEL_MAX_DATA_ROWS)
+                for sub_idx, sub_chunk in enumerate(sub_chunks, 1):
+                    out_rows = _build_fullload_rows(sub_chunk, phase_label, seed_offset)
+                    if not out_rows:
+                        continue
+                    path = f"{region_base}_part{part}_{sub_idx}.xlsx"
+                    written.extend(_write_excel(out_rows, path))
                 start += len(chunk)
                 part += 1
                 continue
-            if len(out_rows) > EXCEL_MAX_DATA_ROWS:
-                # 한 지역 내 학교가 많아 행 한도 초과 시 행 단위로 분할 저장
-                for sub_idx, sub_start in enumerate(range(0, len(out_rows), EXCEL_MAX_DATA_ROWS), 1):
-                    sub_rows = out_rows[sub_start : sub_start + EXCEL_MAX_DATA_ROWS]
-                    path = f"{region_base}_part{part}_{sub_idx}.xlsx"
-                    written.extend(_write_excel(sub_rows, path))
+            out_rows = _build_fullload_rows(chunk, phase_label, seed_offset)
+            if not out_rows:
                 start += len(chunk)
                 part += 1
                 continue

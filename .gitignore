@@ -23,7 +23,8 @@ Thumbs.db
 
 # Outputs/logs
 output/
-logs/
+logs/*
+!logs/채팅내역_*.txt
 *.log
 
 # PyInstaller build artifacts

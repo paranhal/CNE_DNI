@@ -1,0 +1,30 @@
+# 오늘 채팅 내역 (2025-03-13)
+
+## 1. W열 평균값 데이터 추가
+- 기획문서(docs/07_전부하_EDU_원데이터_생성_기획.md) 섹션 5: 출력 열에 W열 "평균값 데이터" 명시, 2번 구간(평균용 측정) 행에만 표기, 1번 구간(ramp)은 빈칸
+- 소스(fullload_orig_data_generator.py): OUTPUT_HEADERS에 "평균값 데이터" 추가, _build_fullload_rows에서 1번 구간 행은 "", 2번 구간 행은 "평균값 데이터" 설정
+
+## 2. 600개 평균 = 원본 일치 로직 수정
+- 원인: 캡(0.8~1.2배) 보정·이상치 제한·반올림으로 생성 600개 평균이 원본 target과 어긋남
+- 추가: _redistribute_to_match_sum() — sum이 target_sum이 되도록 캡 유지하며 재분배
+- _generate_600_with_mean에서: 초기 채우기 후·_limit_outliers 후·반올림 직전에 재분배 호출
+- 반올림 후 마지막 값 보정으로 rounded 600개 합 = 600*target 유지
+
+## 3. Git 업로드
+- .gitignore에 build/, dist/ 추가
+- docs, scripts, src/measure 관련 파일 스테이징 후 커밋
+- 커밋 메시지: "전부하(EDU) 원데이터 생성기: W열 평균값 데이터, 600개 평균=원본 일치 로직, 기획문서·빌드 스크립트 추가"
+- origin/main 푸시 완료
+
+## 4. Excel 행 한도 초과 시 학교 경계 균등 분할
+- 요청: 1번째 파일에 1,048,575행 꽉 채우지 말고, 데이터를 반반 정도 나누되 학교별로 끊어서 분리
+- 추가: _count_fullload_rows(school_groups) — 실제 생성 없이 학교 그룹별 생성 행 수 계산
+- 추가: _partition_groups_by_row_limit(groups, max_rows) — 학교 경계만 사용해 파일당 행 수를 균등(반반) 분할
+- run_phase 수정: 행 한도 초과 시 행 단위 자르기 제거, 예상 행 수 계산 후 학교 단위로 파티션 → 각 sub_chunk별로 _build_fullload_rows 후 저장
+
+## 5. 빌드
+- PyInstaller로 전부하 원데이터 생성기 빌드 (scripts/fullload_orig_data_generator.spec)
+- 출력: dist/전부하 데이터 발생기
+
+---
+생성 시각: 2025-03-13
