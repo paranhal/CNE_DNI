@@ -26,6 +26,10 @@ from typing import Any
 
 if getattr(sys, "frozen", False):
     _BASE_DIR = os.path.dirname(os.path.abspath(sys.executable))
+    try:
+        os.chdir(_BASE_DIR)
+    except OSError:
+        pass
     _MEIPASS = getattr(sys, "_MEIPASS", _BASE_DIR)
     _MEASURE_BUNDLE = os.path.join(_MEIPASS, "measure")
     if os.path.isdir(_MEASURE_BUNDLE) and _MEASURE_BUNDLE not in sys.path:
@@ -83,13 +87,16 @@ VARIANCE_JSON_NAME = "fullload_variance_params.json"
 
 
 def _load_variance_params_from_json() -> dict[str, float] | None:
-    """5개 학교 분산 분석 JSON에서 dl_cv, ul_cv, rssi_std 로드. 실행/실행파일/measure 폴더 순으로 탐색."""
-    search_dirs = list(_DATA_DIRS)
+    """5개 학교 분산 분석 JSON에서 dl_cv, ul_cv, rssi_std 로드. 스크립트/실행파일이 있는 폴더를 가장 먼저 탐색해 수정한 JSON이 적용되도록 함."""
+    search_dirs = [_BASE_DIR]
+    for d in _DATA_DIRS:
+        if d != _BASE_DIR and d not in search_dirs:
+            search_dirs.append(d)
     if getattr(sys, "frozen", False):
         _m = getattr(sys, "_MEIPASS", _BASE_DIR)
         measure_bundle = os.path.join(_m, "measure")
         if measure_bundle not in search_dirs:
-            search_dirs.insert(0, measure_bundle)
+            search_dirs.append(measure_bundle)
     for d in search_dirs:
         path = os.path.join(d, VARIANCE_JSON_NAME)
         if os.path.isfile(path):
@@ -558,7 +565,6 @@ def _redistribute_to_match_sum(vals: list[float], target_sum: float, cap_lo: flo
         excess = vals[-1] - cap_lo
         vals[-1] = cap_lo
     indices = list(range(n - 1))
-    random.shuffle(indices)
     for i in indices:
         if abs(excess) < eps:
             break

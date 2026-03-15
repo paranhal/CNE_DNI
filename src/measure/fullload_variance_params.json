@@ -2,5 +2,5 @@
   "description": "5개 샘플 학교 전부하 측정 CSV 분산 분석 결과. DL/UL 계수변동(CV), RSSI 표준편차.",
   "dl_cv": 0.743,
   "ul_cv": 1.583,
-  "rssi_std": 3.13
+  "rssi_std": 1.52
 }

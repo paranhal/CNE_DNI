@@ -1,0 +1,23 @@
+# 오늘 채팅 내역 (2025-03-15)
+
+## 1. 분산 JSON 파일 명·위치
+- 파일명: fullload_variance_params.json
+- 위치: 스크립트/실행파일이 있는 폴더를 가장 먼저 탐색 (수정한 JSON 적용되도록)
+
+## 2. JSON 적용 안 됨 → 탐색 순서 수정
+- 원인: 번들 내 JSON이 먼저 읽혀 src/measure 또는 실행파일 폴더의 수정본이 무시됨
+- 수정: _load_variance_params_from_json()에서 _BASE_DIR(스크립트/실행파일 폴더)를 맨 먼저 탐색하도록 변경
+
+## 3. cwd와 실행파일 위치 통일
+- 실행파일 실행 시 시작 시점에 os.chdir(_BASE_DIR) 호출
+- cwd = 실행파일이 있는 폴더로 고정되어, JSON·데이터·파일 선택 기준 경로 일치
+
+## 4. 실행 느림(2~3배) → 성능 개선
+- 원인: _redistribute_to_match_sum 내 random.shuffle(indices)가 장비·학교마다 반복 호출됨
+- 수정: shuffle 제거, 인덱스 순서(0,1,2,…)대로만 재분배 (결과 동일, 속도 복구)
+
+## 5. 빌드
+- 수정 반영 후 PyInstaller 빌드 완료 (dist/전부하 데이터 발생기)
+
+---
+생성 시각: 2025-03-15
